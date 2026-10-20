@@ -5,10 +5,12 @@ import { useEffect, useRef, type ReactNode } from 'react';
 export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
 
+  // Não fechamos no cleanup: o React em desenvolvimento monta, desmonta e monta de novo,
+  // e um close() ali dispara onClose e fecha a janela assim que ela abre.
+  // Ao sair da tela, o <dialog> é removido junto com o componente.
   useEffect(() => {
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal();
-    return () => dialog?.close();
   }, []);
 
   return (
