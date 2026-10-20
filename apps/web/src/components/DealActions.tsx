@@ -120,7 +120,7 @@ function WinForm({ lead, onClose, onDone }: { lead: LeadDetail; onClose: () => v
   const [kind, setKind] = useState<DealKind>(lead.defaultDealKind);
   const [valueText, setValueText] = useState('');
   const lastVisitReference = lead.visits.find((v) => v.propertyReference)?.propertyReference;
-  const [reference, setReference] = useState(lastVisitReference ?? (lead.originSource === 'REF_CODE' ? (lead.originPost ?? '') : ''));
+  const [reference, setReference] = useState(lastVisitReference ?? lead.propertyReference ?? '');
   const { saving, error, setError, submit } = useSubmit(onDone);
   const value = parseMoneyInput(valueText);
 

@@ -2,7 +2,12 @@ import type { WaMessage } from './webhook.types';
 
 export type ExtractedOrigin = {
   source: 'REF_CODE' | 'CTWA_AD';
+  /** Texto legado da origem: "AD-<id> (<título>)" ou "REF-042" */
   post: string;
+  adId: string | null;
+  adHeadline: string | null;
+  /** Código REF da mensagem, mesmo quando ela veio de anúncio */
+  refCode: string | null;
 };
 
 /**
@@ -21,23 +26,27 @@ export function extractRefCode(text: string): string | null {
 }
 
 /**
- * Descobre de onde o lead veio. Anúncio tem prioridade sobre código no texto,
- * porque o referral é preenchido pela própria Meta.
+ * Descobre de onde o lead veio. Anúncio define a origem (o referral é preenchido pela
+ * própria Meta); o código REF digitado é guardado junto, como referência do imóvel.
  */
 export function extractOrigin(message: WaMessage): ExtractedOrigin | null {
+  const text = message.text?.body;
+  const refCode = text ? extractRefCode(text) : null;
+
   const referral = message.referral;
   if (referral) {
-    const id = referral.source_id ?? referral.ctwa_clid ?? 'sem-id';
-    const headline = referral.headline?.trim();
-    const post = headline ? `AD-${id} (${headline})` : `AD-${id}`;
-    return { source: 'CTWA_AD', post: post.slice(0, MAX_ORIGIN_LENGTH) };
+    const adId = (referral.source_id ?? referral.ctwa_clid ?? 'sem-id').trim();
+    const headline = referral.headline?.trim() || null;
+    const post = headline ? `AD-${adId} (${headline})` : `AD-${adId}`;
+    return {
+      source: 'CTWA_AD',
+      post: post.slice(0, MAX_ORIGIN_LENGTH),
+      adId: adId.slice(0, MAX_ORIGIN_LENGTH),
+      adHeadline: headline?.slice(0, MAX_ORIGIN_LENGTH) ?? null,
+      refCode,
+    };
   }
 
-  const text = message.text?.body;
-  if (text) {
-    const code = extractRefCode(text);
-    if (code) return { source: 'REF_CODE', post: code };
-  }
-
+  if (refCode) return { source: 'REF_CODE', post: refCode, adId: null, adHeadline: null, refCode };
   return null;
 }

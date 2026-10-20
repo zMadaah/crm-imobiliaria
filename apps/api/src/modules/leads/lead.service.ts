@@ -26,6 +26,8 @@ export async function findOrCreateLeadByPhone(input: FindOrCreateInput): Promise
     return { lead: await fillMissingData(existing, input), created: false };
   }
 
+  await ensureAd(input.origin);
+
   try {
     const lead = await prisma.lead.create({
       data: {
@@ -33,6 +35,8 @@ export async function findOrCreateLeadByPhone(input: FindOrCreateInput): Promise
         name: input.name ?? null,
         originPost: input.origin?.post ?? null,
         originSource: input.origin?.source ?? 'UNKNOWN',
+        originAdId: input.origin?.adId ?? null,
+        originRef: input.origin?.refCode ?? null,
         stage: 'NEW',
         stageHistory: { create: { fromStage: null, toStage: 'NEW' } },
       },
@@ -54,10 +58,23 @@ async function fillMissingData(lead: Lead, input: FindOrCreateInput): Promise<Le
   if (!lead.name && input.name) data.name = input.name;
 
   if (!lead.originPost && input.origin) {
+    await ensureAd(input.origin);
     data.originPost = input.origin.post;
     data.originSource = input.origin.source;
+    if (input.origin.adId) data.ad = { connect: { adId: input.origin.adId } };
   }
+  if (!lead.originRef && input.origin?.refCode) data.originRef = input.origin.refCode;
 
   if (Object.keys(data).length === 0) return lead;
   return prisma.lead.update({ where: { id: lead.id }, data });
+}
+
+/** Cria o anúncio na primeira vez que ele traz um lead; o dono dá o nome depois, no painel. */
+async function ensureAd(origin: ExtractedOrigin | null): Promise<void> {
+  if (!origin?.adId) return;
+  await prisma.ad.upsert({
+    where: { adId: origin.adId },
+    create: { adId: origin.adId, headline: origin.adHeadline },
+    update: {},
+  });
 }

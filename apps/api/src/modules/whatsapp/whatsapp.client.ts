@@ -40,7 +40,7 @@ export function toCloudApiPayload(to: string, message: OutgoingMessage): Record<
             sections: [
               {
                 title: LIST_SECTION_TITLE,
-                rows: message.rows.map((row) => ({ id: row.id, title: row.title })),
+                rows: message.rows.map((row) => ({ id: row.id, title: row.title, ...(row.description ? { description: row.description } : {}) })),
               },
             ],
           },
@@ -81,7 +81,7 @@ export async function sendWhatsAppMessage(to: string, message: OutgoingMessage):
 function logDryRun(to: string, message: OutgoingMessage) {
   const lines = [`[dry-run] para ${to} (${message.type})`, ...message.body.split('\n').map((l) => `  ${l}`)];
   if (message.type === 'buttons') lines.push(...message.buttons.map((b) => `  [ ${b.title} ]`));
-  if (message.type === 'list') lines.push(...message.rows.map((r) => `  • ${r.title}`));
+  if (message.type === 'list') lines.push(...message.rows.map((r) => `  • ${r.title}${r.description ? ` (${r.description})` : ''}`));
   console.log(lines.join('\n'));
 }
 

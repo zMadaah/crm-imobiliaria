@@ -13,6 +13,7 @@ import {
 } from '../visits/visit.service';
 import { formatSlotLabel } from '../visits/zoned-time';
 import { decideHumanReplyEffects } from '../leads/human-reply';
+import { suggestedPropertyReference } from '../leads/lead-origin';
 import { changeLeadStage } from '../leads/lead-stage.service';
 import { sendAndRecord } from '../whatsapp/outbound.service';
 import type { WaMessage } from '../whatsapp/webhook.types';
@@ -72,8 +73,19 @@ async function processMessage({ leadId, phone, message }: BotParams): Promise<vo
   // Fluxo concluído ou encaminhado: o bot fica em silêncio, a conversa segue no painel.
   if (session.status !== 'ACTIVE') return;
 
+  // Conversa parada numa pergunta que saiu do fluxo (troca de perguntas): recomeça do início.
   if (!isStepKey(session.currentStep)) {
-    console.error(`[bot] passo desconhecido "${session.currentStep}" na sessão do lead ${leadId}`);
+    console.warn(`[bot] passo "${session.currentStep}" não existe mais; recomeçando o fluxo do lead ${leadId}`);
+    const restart = startConversation();
+    await prisma.botSession.update({
+      where: { leadId },
+      data: {
+        currentStep: restart.state.step,
+        retryCount: 0,
+        context: restart.state.context as unknown as Prisma.InputJsonValue,
+      },
+    });
+    await sendMessages(leadId, phone, restart);
     return;
   }
 
@@ -172,7 +184,15 @@ async function offerSlots(leadId: string, result: BotResult, prefix?: string): P
 async function bookSlot(leadId: string, start: Date): Promise<{ visit: Visit; brokerName: string } | null> {
   const lead = await prisma.lead.findUniqueOrThrow({
     where: { id: leadId },
-    select: { brokerId: true, originPost: true, originSource: true, broker: { select: { name: true } } },
+    select: {
+      brokerId: true,
+      originPost: true,
+      originSource: true,
+      originAdId: true,
+      originRef: true,
+      ad: { select: { name: true, headline: true, propertyReference: true } },
+      broker: { select: { name: true } },
+    },
   });
   if (!lead.brokerId || !lead.broker) return null;
 
@@ -183,7 +203,7 @@ async function bookSlot(leadId: string, start: Date): Promise<{ visit: Visit; br
         brokerId: lead.brokerId,
         start,
         durationMinutes: SCHEDULE.visitMinutes,
-        propertyReference: lead.originSource === 'REF_CODE' ? lead.originPost : null,
+        propertyReference: suggestedPropertyReference(lead),
         createdById: null,
         source: 'BOT',
       },

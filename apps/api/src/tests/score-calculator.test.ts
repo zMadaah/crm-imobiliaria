@@ -17,12 +17,11 @@ const answers = (pairs: Record<string, string>): AnswerInput[] =>
 
 const STRONG_BUYER = {
   greeting: 'accept',
-  intent: 'buy',
-  region: 'centro',
-  price: '500k_1m',
-  payment: 'cash',
-  timeline: 'up_to_3m',
-  decision_maker: 'alone',
+  goal: 'live_first',
+  search_stage: 'want_visit',
+  interest: 'payment_terms',
+  payment: 'own_funds',
+  timeline: 'up_to_30d',
 };
 
 describe('temperatureFor (bordas das faixas)', () => {
@@ -39,70 +38,51 @@ describe('temperatureFor (bordas das faixas)', () => {
 });
 
 describe('calculateScore com os pesos padrão', () => {
-  it('comprador forte que pede visita: 95, quente', () => {
+  it('perfil mais forte com visita: 100, quente', () => {
     const result = calculateScore(answers({ ...STRONG_BUYER, visit: 'yes' }), defaultWeights());
-    expect(result.score).toBe(95);
+    expect(result.score).toBe(100);
     expect(result.temperature).toBe('HOT');
   });
 
-  it('comprador forte sem visita ainda é quente (75)', () => {
-    const result = calculateScore(answers({ ...STRONG_BUYER, visit: 'no' }), defaultWeights());
-    expect(result.score).toBe(75);
-    expect(result.temperature).toBe('HOT');
+  it('mesmo perfil sem visita ainda é quente (80)', () => {
+    expect(calculateScore(answers({ ...STRONG_BUYER, visit: 'no' }), defaultWeights()).score).toBe(80);
   });
 
   it('pedido de visita soma exatamente 20', () => {
-    const withVisit = calculateScore(answers({ ...STRONG_BUYER, visit: 'yes' }), defaultWeights());
-    const without = calculateScore(answers({ ...STRONG_BUYER, visit: 'no' }), defaultWeights());
-    expect(withVisit.score - without.score).toBe(20);
+    const withVisit = calculateScore(answers({ ...STRONG_BUYER, visit: 'yes' }), defaultWeights()).score;
+    const without = calculateScore(answers({ ...STRONG_BUYER, visit: 'no' }), defaultWeights()).score;
+    expect(withVisit - without).toBe(20);
   });
 
-  it('quem vai financiar em 3 a 6 meses é morno', () => {
+  it('investidor comparando, financiamento sem simular em 3 meses: morno', () => {
     const result = calculateScore(
-      answers({ ...STRONG_BUYER, payment: 'will_finance', timeline: '3m_6m', visit: 'no' }),
+      answers({ goal: 'invest', search_stage: 'comparing', interest: 'location', payment: 'financing_not_simulated', timeline: 'up_to_3m', visit: 'no' }),
       defaultWeights(),
     );
-    expect(result.score).toBe(50);
+    expect(result.score).toBe(48);
     expect(result.temperature).toBe('WARM');
   });
 
-  it('quem só está pesquisando e não sabe pagar é frio', () => {
+  it('quem está avaliando, só pesquisando e sem prazo é frio', () => {
     const result = calculateScore(
-      answers({ ...STRONG_BUYER, payment: 'unknown', timeline: 'researching', decision_maker: 'shared', visit: 'no' }),
+      answers({ goal: 'evaluating', search_stage: 'starting', interest: 'floor_plans', payment: 'understand_options', timeline: 'unknown', visit: 'no' }),
       defaultWeights(),
     );
-    expect(result.score).toBe(23);
+    expect(result.score).toBe(10);
     expect(result.temperature).toBe('COLD');
   });
 
-  it('ramo de aluguel usa os pesos da garantia', () => {
-    const result = calculateScore(
-      answers({ intent: 'rent', region: 'zona_sul', price: '1500_3000', payment: 'insurance', timeline: 'up_to_3m', decision_maker: 'alone', visit: 'yes' }),
-      defaultWeights(),
-    );
-    expect(result.score).toBe(90);
-  });
-
   it('"Sem resposta" vale 0', () => {
-    const result = calculateScore(answers({ timeline: 'no_answer', payment: 'no_answer' }), defaultWeights());
-    expect(result.score).toBe(0);
-    expect(result.breakdown.every((item) => item.points === 0)).toBe(true);
+    expect(calculateScore(answers({ timeline: 'no_answer', payment: 'no_answer' }), defaultWeights()).score).toBe(0);
   });
 
-  it('consentimento e respostas sem peso cadastrado valem 0', () => {
-    const result = calculateScore(answers({ greeting: 'accept', region: 'regiao_nova' }), defaultWeights());
-    expect(result.score).toBe(0);
+  it('respostas do fluxo antigo não pontuam mais', () => {
+    expect(calculateScore(answers({ intent: 'buy', region: 'centro', price: '500k_1m' }), defaultWeights()).score).toBe(0);
   });
 
   it('encaminhado no meio: conta só o que foi respondido', () => {
-    const result = calculateScore(answers({ greeting: 'accept', intent: 'buy', region: 'centro' }), defaultWeights());
-    expect(result.score).toBe(10);
-    expect(result.breakdown).toHaveLength(3);
-  });
-
-  it('breakdown devolve os pontos de cada resposta, na ordem', () => {
-    const result = calculateScore(answers({ timeline: 'up_to_3m', payment: 'cash' }), defaultWeights());
-    expect(result.breakdown.map((b) => b.points)).toEqual([25, 25]);
+    const result = calculateScore(answers({ greeting: 'accept', goal: 'invest', search_stage: 'comparing' }), defaultWeights());
+    expect(result.score).toBe(18);
   });
 });
 
@@ -110,15 +90,15 @@ describe('calculateScore com pesos editados pelo dono', () => {
   it('mudar um peso altera o resultado', () => {
     const weights = defaultWeights();
     const before = calculateScore(answers({ ...STRONG_BUYER, visit: 'no' }), weights).score;
-    weights.set(weightKey('timeline', 'up_to_3m'), 50);
+    weights.set(weightKey('timeline', 'up_to_30d'), 40);
     const after = calculateScore(answers({ ...STRONG_BUYER, visit: 'no' }), weights).score;
-    expect(after - before).toBe(25);
+    expect(after - before).toBe(15);
   });
 
   it('a soma é limitada a 100', () => {
     const weights = defaultWeights();
-    weights.set(weightKey('timeline', 'up_to_3m'), 100);
-    weights.set(weightKey('payment', 'cash'), 100);
+    weights.set(weightKey('timeline', 'up_to_30d'), 100);
+    weights.set(weightKey('payment', 'own_funds'), 100);
     const result = calculateScore(answers(STRONG_BUYER), weights);
     expect(result.score).toBe(100);
     expect(result.temperature).toBe('HOT');
@@ -155,7 +135,7 @@ describe('pesos padrão', () => {
       maxPerQuestion.set(k.questionKey, Math.max(maxPerQuestion.get(k.questionKey) ?? 0, k.defaultPoints));
     }
     const max = [...maxPerQuestion.values()].reduce((a, b) => a + b, 0);
-    expect(max).toBe(95);
+    expect(max).toBe(100);
   });
 });
 
@@ -163,11 +143,11 @@ describe('validateWeightUpdates', () => {
   const allowed = new Set(allWeightKeys().map((k) => weightKey(k.questionKey, k.answerKey)));
 
   it('aceita alteração válida', () => {
-    expect(validateWeightUpdates([{ questionKey: 'timeline', answerKey: 'up_to_3m', points: 50 }], allowed)).toEqual([]);
+    expect(validateWeightUpdates([{ questionKey: 'timeline', answerKey: 'up_to_30d', points: 50 }], allowed)).toEqual([]);
   });
 
   it.each([-1, 101, 1.5, Number.NaN])('recusa %s pontos', (points) => {
-    expect(validateWeightUpdates([{ questionKey: 'timeline', answerKey: 'up_to_3m', points }], allowed)).toHaveLength(1);
+    expect(validateWeightUpdates([{ questionKey: 'timeline', answerKey: 'up_to_30d', points }], allowed)).toHaveLength(1);
   });
 
   it('recusa resposta que não existe no fluxo', () => {

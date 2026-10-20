@@ -128,6 +128,10 @@ model Lead {
   name         String?
   originPost   String?          @map("origin_post")
   originSource OriginSource     @default(UNKNOWN) @map("origin_source")
+  /// ID do anúncio Click-to-WhatsApp (quando veio de anúncio)
+  originAdId   String?          @map("origin_ad_id")
+  /// Código REF digitado na mensagem (pode vir junto com o anúncio)
+  originRef    String?          @map("origin_ref")
   score        Int              @default(0)
   /// Nula até o bot concluir a qualificação
   temperature  LeadTemperature?
@@ -141,6 +145,7 @@ model Lead {
   updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   broker       User?                 @relation(fields: [brokerId], references: [id], onDelete: SetNull)
+  ad           Ad?                   @relation(fields: [originAdId], references: [adId], onDelete: SetNull)
   messages     Message[]
   answers      QualificationAnswer[]
   visits       Visit[]
@@ -156,6 +161,7 @@ model Lead {
   @@index([temperature])
   @@index([originSource, originPost])
   @@index([createdAt])
+  @@index([originAdId])
   @@map("leads")
 }
 
@@ -290,6 +296,23 @@ model BotSession {
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@map("bot_sessions")
+}
+
+/// Anúncios Click-to-WhatsApp. Criados sozinhos quando chega o primeiro lead;
+/// o dono dá um nome legível e a referência do imóvel no painel.
+model Ad {
+  id                String   @id @default(uuid()) @db.Uuid
+  adId              String   @unique @map("ad_id")
+  /// Título que a Meta mandou na primeira mensagem
+  headline          String?
+  name              String?
+  propertyReference String?  @map("property_reference")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  leads Lead[]
+
+  @@map("ads")
 }
 
 /// Pontos de cada resposta do bot. Editável pelo dono; os padrões são criados ao subir a API.

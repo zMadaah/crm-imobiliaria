@@ -2,6 +2,7 @@ import cors from 'cors';
 import express, { type ErrorRequestHandler } from 'express';
 import { env } from './config/env';
 import { prisma } from './lib/prisma';
+import { adsRouter } from './modules/ads/ads.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { leadsRouter } from './modules/leads/leads.routes';
 import { visitsRouter } from './modules/visits/visits.routes';
@@ -33,6 +34,7 @@ app.use('/notifications', notificationsRouter);
 app.use('/leads', leadsRouter);
 app.use('/visits', visitsRouter);
 app.use('/reports', reportsRouter);
+app.use('/ads', adsRouter);
 
 const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   console.error('[api] erro não tratado', error);

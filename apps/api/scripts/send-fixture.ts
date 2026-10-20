@@ -33,6 +33,7 @@ async function main() {
 
   const url = getArg('--url') ?? `http://localhost:${process.env.PORT ?? 3333}/webhooks/whatsapp`;
   const from = getArg('--from');
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const newId = process.argv.includes('--new-id');
 
   const path = join(__dirname, '..', 'src', 'tests', 'fixtures', `${fixtureName}.json`);
@@ -46,6 +47,8 @@ async function main() {
         message.timestamp = String(Math.floor(Date.now() / 1000));
       }
       if (from) for (const contact of change.value.contacts ?? []) contact.wa_id = from;
+      // Com o número configurado no .env, a fixture finge chegar a ele.
+      if (phoneNumberId) change.value.metadata.phone_number_id = phoneNumberId;
     }
   }
 

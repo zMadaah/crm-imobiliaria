@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { homePathFor, useAuth } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
 import { Layout } from './components/Layout';
+import { Ads } from './pages/Ads';
 import { Agenda } from './pages/Agenda';
 import { Indicators } from './pages/Indicators';
 import { LeadDetail } from './pages/LeadDetail';
@@ -38,6 +39,14 @@ export function App() {
         <Route path="/leads" element={<Leads />} />
         <Route path="/leads/:id" element={<LeadDetail />} />
         <Route path="/agenda" element={<Agenda />} />
+        <Route
+          path="/anuncios"
+          element={
+            <RequireAuth role="OWNER">
+              <Ads />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/indicadores"
           element={

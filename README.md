@@ -103,3 +103,47 @@ e digitar "quero falar com um corretor".
 No `.env`: `WHATSAPP_DRY_RUN="false"`, `WHATSAPP_ACCESS_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID`
 (painel do app > WhatsApp > Configuração da API). Reinicie a API, deixe o túnel ativo e
 mande uma mensagem do seu celular para o número de teste.
+
+## Etapa final: CB Engenharia, número do WhatsApp e anúncios
+
+### Perguntas do bot
+
+Saudação da CB Engenharia com aviso de uso dos dados, e depois:
+
+1. Morar ou investir: Morar (primeiro imóvel), Morar (mudança), Investir, Ainda estou avaliando
+2. Etapa da busca: Comecei a pesquisar, Comparando opções, Já quero visitar
+3. O que conhecer primeiro: Plantas, Localização e estrutura, Condições de pagamento
+4. Como pagar: Recursos próprios, Financiar (já simulei), Financiar (não simulei), Venda de outro imóvel, Quero entender opções
+5. Prazo: Até 30 dias, Até 3 meses, Até 6 meses, Ainda não sei
+6. Visita: Sim, Não (o "Sim" oferece os horários livres do corretor)
+
+As listas do WhatsApp aceitam até 24 caracteres no título da opção; os textos mais longos
+aparecem completos na linha de descrição. Pesos padrão somam no máximo 100 e continuam editáveis em Pontuação.
+Respostas de leads antigos continuam visíveis; conversas paradas numa pergunta antiga recomeçam do início.
+
+### Número do WhatsApp
+
+Com `WHATSAPP_PHONE_NUMBER_ID` preenchido, o bot só atende mensagens que chegam a esse número e responde por ele.
+Mensagens para outros números da mesma conta na Meta são ignoradas. Vazio (testes locais), aceita todas.
+
+### Anúncios
+
+- Cada anúncio Click-to-WhatsApp é cadastrado sozinho quando traz o primeiro lead (menu **Anúncios**, só o dono).
+- O dono dá um nome ("Apto 3 quartos, Torre A") e o imóvel; o nome aparece nos leads e nos indicadores.
+- Se a mensagem do anúncio trouxer um código `REF-...`, ele é guardado junto como imóvel do lead.
+- Simular cliente vindo de anúncio: `npm run chat -- --anuncio 111 --titulo "Torre A"`.
+
+### Atualizando
+
+```bash
+cd apps/api && npm install && npm run db:deploy   # pare a API antes
+cd ../web && npm install
+```
+
+### Aceite
+
+1. `npm run chat -- --anuncio 111 --titulo "Torre A"` e `npm run chat -- --anuncio 222 --titulo "Torre B"`:
+   percorra as 6 perguntas. Os dois leads aparecem com anúncios diferentes.
+2. Em **Anúncios**, dê nomes aos dois. A lista de leads e os Indicadores passam a mostrar os nomes.
+3. `npm run chat` começando com "Olá, vi o REF-101": origem "Post REF-101".
+4. `npm run check:indicators`: 7 linhas com ✔.

@@ -3,7 +3,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
 import { requireAuth } from '../auth/auth.middleware';
-import { isStepKey, QUESTION_TITLES, STEP_KEYS } from '../bot/qualification-flow';
+import { isStepKey, questionTitle, STEP_KEYS } from '../bot/qualification-flow';
+import { originLabel, suggestedPropertyReference } from './lead-origin';
 import { leadAccessWhere } from './lead-access';
 import { leadMessagesRouter } from './lead-messages.routes';
 import { dealsRouter } from '../deals/deals.routes';
@@ -62,6 +63,9 @@ leadsRouter.get('/', async (req, res) => {
       stage: true,
       originPost: true,
       originSource: true,
+      originAdId: true,
+      originRef: true,
+      ad: { select: { name: true, headline: true, propertyReference: true } },
       lastMessageAt: true,
       broker: { select: { id: true, name: true } },
       messages: {
@@ -75,8 +79,9 @@ leadsRouter.get('/', async (req, res) => {
 
   const page = leads.slice(0, PAGE_SIZE);
   const items = await Promise.all(
-    page.map(async ({ messages, reads, ...lead }) => ({
+    page.map(async ({ messages, reads, ad, originAdId, originRef, ...lead }) => ({
       ...lead,
+      originLabel: originLabel({ ...lead, originAdId, originRef, ad }),
       lastMessageAt: lead.lastMessageAt?.toISOString() ?? null,
       lastMessage: messages[0]
         ? { ...messages[0], sentAt: messages[0].sentAt.toISOString() }
@@ -98,6 +103,7 @@ leadsRouter.get('/:id', async (req, res) => {
   const lead = await prisma.lead.findFirst({
     where: { AND: [{ id: req.params.id }, leadAccessWhere(req.user!)] },
     include: {
+      ad: { select: { name: true, headline: true, propertyReference: true } },
       broker: { select: { id: true, name: true } },
       answers: true,
       botSession: { select: { status: true, currentStep: true } },
@@ -142,6 +148,8 @@ leadsRouter.get('/:id', async (req, res) => {
     stage: lead.stage,
     originPost: lead.originPost,
     originSource: lead.originSource,
+    originLabel: originLabel(lead),
+    propertyReference: suggestedPropertyReference(lead),
     createdAt: lead.createdAt.toISOString(),
     broker: lead.broker,
     botStatus: lead.botSession?.status ?? null,
@@ -150,7 +158,7 @@ leadsRouter.get('/:id', async (req, res) => {
       .sort((a, b) => order(a.questionKey) - order(b.questionKey))
       .map((answer) => ({
         questionKey: answer.questionKey,
-        question: isStepKey(answer.questionKey) ? QUESTION_TITLES[answer.questionKey] : answer.questionKey,
+        question: questionTitle(answer.questionKey),
         answer: answer.answerLabel,
         points: answer.points,
       })),

@@ -6,6 +6,11 @@
  * Uso:
  *   npm run chat
  *   npm run chat -- --from 5561988887777
+ *   npm run chat -- --anuncio 120211111111111111
+ *   npm run chat -- --anuncio 120211111111111111 --titulo "Apto 3 quartos Torre A"
+ *
+ * --anuncio simula um cliente vindo de um anúncio Click-to-WhatsApp: a primeira
+ * mensagem leva o ID do anúncio, como a Meta faz.
  *
  * Digite o número de uma opção para "tocar" no botão, ou qualquer texto
  * para simular uma mensagem digitada. "sair" encerra.
@@ -17,6 +22,7 @@ import { createInterface } from 'node:readline/promises';
 import { PrismaClient } from '@prisma/client';
 import { renderStep, type InteractiveChoice } from '../src/modules/bot/bot-engine';
 import { isStepKey, type BotContext } from '../src/modules/bot/qualification-flow';
+import { originLabel } from '../src/modules/leads/lead-origin';
 import { signPayload } from '../src/modules/whatsapp/signature';
 import type { WaMessage } from '../src/modules/whatsapp/webhook.types';
 
@@ -30,6 +36,11 @@ function getArg(name: string): string | undefined {
 const secret = process.env.WHATSAPP_APP_SECRET ?? '';
 const url = `http://localhost:${process.env.PORT ?? 3333}/webhooks/whatsapp`;
 const phone = getArg('--from') ?? `55619${Math.floor(10_000_000 + Math.random() * 89_999_999)}`;
+const adId = getArg('--anuncio');
+const adTitle = getArg('--titulo') ?? (adId ? `Anúncio de teste ${adId}` : undefined);
+// Mesmo ID do .env: com ele preenchido, o webhook só atende esse número.
+const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || 'SIMULADOR';
+let firstMessage = true;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -44,7 +55,7 @@ async function postMessage(message: WaMessage) {
             field: 'messages',
             value: {
               messaging_product: 'whatsapp',
-              metadata: { display_phone_number: '15550000000', phone_number_id: 'SIMULADOR' },
+              metadata: { display_phone_number: '15550000000', phone_number_id: phoneNumberId },
               contacts: [{ wa_id: phone, profile: { name: 'Cliente Simulado' } }],
               messages: [message],
             },
@@ -63,7 +74,14 @@ async function postMessage(message: WaMessage) {
 }
 
 function baseMessage() {
-  return { id: `wamid.SIM_${randomUUID()}`, from: phone, timestamp: String(Math.floor(Date.now() / 1000)) };
+  const base = { id: `wamid.SIM_${randomUUID()}`, from: phone, timestamp: String(Math.floor(Date.now() / 1000)) };
+  // A Meta só manda os dados do anúncio na primeira mensagem da conversa.
+  if (firstMessage && adId) {
+    firstMessage = false;
+    return { ...base, referral: { source_id: adId, source_type: 'ad', headline: adTitle, ctwa_clid: `SIM_${adId}` } };
+  }
+  firstMessage = false;
+  return base;
 }
 
 type Outbound = { id: string; body: string | null; sentBy: { name: string } | null };
@@ -120,12 +138,14 @@ async function printSummary() {
     include: {
       answers: { orderBy: { createdAt: 'asc' } },
       broker: { select: { name: true } },
+      ad: { select: { name: true, headline: true, propertyReference: true } },
       visits: { where: { status: 'SCHEDULED' }, orderBy: { scheduledAt: 'asc' } },
     },
   });
   if (!lead) return;
   console.log('\n──────── Resumo ────────');
   console.log(`Lead: ${lead.name ?? '-'} (${lead.phone})`);
+  console.log(`Origem: ${originLabel(lead)}${lead.originRef ? `  |  Código: ${lead.originRef}` : ''}`);
   console.log(`Etapa: ${lead.stage}  |  Corretor: ${lead.broker?.name ?? 'nenhum'}`);
   const temperature = { HOT: 'quente', WARM: 'morno', COLD: 'frio' } as const;
   console.log(`Score: ${lead.score}  |  Temperatura: ${lead.temperature ? temperature[lead.temperature] : '-'}`);
@@ -144,7 +164,7 @@ async function main() {
   }
 
   const rl = createInterface({ input, output });
-  console.log(`Simulando o cliente ${phone}. Digite "sair" para encerrar.\n`);
+  console.log(`Simulando o cliente ${phone}${adId ? `, vindo do anúncio ${adId}` : ''}. Digite "sair" para encerrar.\n`);
 
   let choices: InteractiveChoice[] = [];
   let kind: 'button_reply' | 'list_reply' = 'button_reply';
@@ -205,7 +225,7 @@ async function main() {
     }
     choices = state.choices;
     kind = state.kind;
-    choices.forEach((c, i) => console.log(`   ${i + 1}) ${c.title}`));
+    choices.forEach((c, i) => console.log(`   ${i + 1}) ${c.title}${c.description ? `  (${c.description})` : ''}`));
     console.log('');
   }
 

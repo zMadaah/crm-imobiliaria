@@ -57,13 +57,19 @@ ORDER BY u.name NULLS LAST`,
   byOrigin: {
     title: 'Leads e fechamentos por origem (leads que chegaram no período)',
     sql: `SELECT
-  COALESCE(l.origin_post, 'Não identificada') AS origin,
+  CASE
+    WHEN l.origin_ad_id IS NOT NULL AND COALESCE(NULLIF(a.name, ''), NULLIF(a.headline, '')) IS NOT NULL
+      THEN 'Anúncio: ' || COALESCE(NULLIF(a.name, ''), a.headline)
+    WHEN l.origin_ad_id IS NOT NULL THEN 'Anúncio ' || l.origin_ad_id
+    ELSE COALESCE(l.origin_post, 'Não identificada')
+  END AS origin,
   l.origin_source::text AS origin_source,
   COUNT(*)::int AS leads,
   COUNT(w.lead_id)::int AS won,
   COALESCE(SUM(w.sales_value), 0)::text AS sales_value,
   COALESCE(SUM(w.rentals_value), 0)::text AS rentals_value
 FROM leads l
+LEFT JOIN ads a ON a.ad_id = l.origin_ad_id
 LEFT JOIN (
   SELECT
     lead_id,

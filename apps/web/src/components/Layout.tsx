@@ -1,4 +1,4 @@
-import { BarChart3, Bell, CalendarDays, LogOut, SlidersHorizontal, Users } from 'lucide-react';
+import { BarChart3, Bell, CalendarDays, LogOut, Megaphone, SlidersHorizontal, Users } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { HotLeadToast } from './HotLeadToast';
@@ -38,6 +38,12 @@ export function Layout() {
               <NavLink to="/indicadores" className={navClass}>
                 <BarChart3 size={18} aria-hidden />
                 Indicadores
+              </NavLink>
+            )}
+            {user.role === 'OWNER' && (
+              <NavLink to="/anuncios" className={navClass}>
+                <Megaphone size={18} aria-hidden />
+                Anúncios
               </NavLink>
             )}
             {user.role === 'OWNER' && (

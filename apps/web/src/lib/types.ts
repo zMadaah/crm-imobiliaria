@@ -43,6 +43,7 @@ export type LeadListItem = {
   stage: LeadStage;
   originPost: string | null;
   originSource: 'REF_CODE' | 'CTWA_AD' | 'UNKNOWN';
+  originLabel: string;
   lastMessageAt: string | null;
   broker: { id: string; name: string } | null;
   lastMessage: { body: string | null; type: string; direction: 'INBOUND' | 'OUTBOUND'; sentAt: string } | null;
@@ -69,6 +70,9 @@ export type LeadDetail = {
   stage: LeadStage;
   originPost: string | null;
   originSource: 'REF_CODE' | 'CTWA_AD' | 'UNKNOWN';
+  originLabel: string;
+  /** Imóvel sugerido: código digitado ou imóvel do anúncio */
+  propertyReference: string | null;
   createdAt: string;
   broker: { id: string; name: string } | null;
   botStatus: 'ACTIVE' | 'COMPLETED' | 'HANDED_OFF' | 'DECLINED' | null;
@@ -125,4 +129,15 @@ export type Visit = {
   pending: boolean;
   lead?: { id: string; name: string | null; phone: string };
   broker: { id: string; name: string };
+};
+
+export type AdItem = {
+  id: string;
+  adId: string;
+  headline: string | null;
+  name: string | null;
+  propertyReference: string | null;
+  leads: number;
+  won: number;
+  createdAt: string;
 };

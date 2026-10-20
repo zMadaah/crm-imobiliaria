@@ -157,7 +157,7 @@ function Dashboard({ data }: { data: Data }) {
         <Table
           head={['Origem', 'Leads', 'Fecharam', 'Conversão', 'Vendas', 'Aluguel mensal']}
           rows={data.byOrigin.map((o) => [
-            o.originSource === 'CTWA_AD' ? `Anúncio ${o.origin.replace(/^AD-/, '')}` : o.origin,
+            o.originSource === 'CTWA_AD' && o.origin.startsWith('AD-') ? `Anúncio ${o.origin.replace(/^AD-/, '')}` : o.origin,
             o.leads,
             o.won,
             pct(o.won, o.leads),

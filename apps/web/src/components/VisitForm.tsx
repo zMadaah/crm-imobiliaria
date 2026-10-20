@@ -46,7 +46,7 @@ export function VisitForm({ presetLeadId, initialStart, onClose, onCreated }: Pr
     apiFetch<LeadDetail>(`/leads/${leadId}`)
       .then((data) => {
         setLead(data);
-        setReference(data.originSource === 'REF_CODE' ? (data.originPost ?? '') : '');
+        setReference(data.propertyReference ?? '');
         setNotifyClient(data.serviceWindow.open);
       })
       .catch(() => setError('Não foi possível carregar o lead.'));
