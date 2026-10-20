@@ -1,0 +1,36 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "WABA_ID",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": { "display_phone_number": "15551234567", "phone_number_id": "PHONE_NUMBER_ID" },
+            "contacts": [{ "wa_id": "5561999990002", "profile": { "name": "João Anúncio" } }],
+            "messages": [
+              {
+                "id": "wamid.TESTE_AD_001",
+                "from": "5561999990002",
+                "timestamp": "1790000100",
+                "type": "text",
+                "text": { "body": "Olá! Quero mais informações sobre isso." },
+                "referral": {
+                  "source_url": "https://fb.me/exemplo",
+                  "source_id": "120211111111111111",
+                  "source_type": "ad",
+                  "headline": "Casa 3 quartos no Lago Norte",
+                  "body": "Agende sua visita",
+                  "media_type": "image",
+                  "ctwa_clid": "ARAkLkA8rmlFeiCktEJQ"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

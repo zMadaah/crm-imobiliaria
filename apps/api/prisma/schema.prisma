@@ -1,0 +1,356 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  OWNER
+  BROKER
+}
+
+enum LeadTemperature {
+  HOT
+  WARM
+  COLD
+}
+
+enum LeadStage {
+  NEW
+  QUALIFIED
+  IN_SERVICE
+  VISIT_SCHEDULED
+  VISIT_DONE
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum OriginSource {
+  REF_CODE
+  CTWA_AD
+  UNKNOWN
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum VisitStatus {
+  SCHEDULED
+  DONE
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum VisitSource {
+  BOT
+  PANEL
+}
+
+enum DealKind {
+  SALE
+  RENT
+}
+
+enum DealResult {
+  WON
+  LOST
+}
+
+enum LossReason {
+  PRICE
+  FINANCING_DENIED
+  BOUGHT_ELSEWHERE
+  GAVE_UP
+  NO_RESPONSE
+  OTHER
+}
+
+enum BotSessionStatus {
+  ACTIVE
+  COMPLETED
+  HANDED_OFF
+  DECLINED
+}
+
+enum NotificationType {
+  HOT_LEAD
+  VISIT_BOOKED
+}
+
+enum WebhookEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+// ---------- Models ----------
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  active       Boolean  @default(true)
+  /// Usado no rodízio: recebe o próximo lead quem recebeu o último há mais tempo
+  lastLeadAssignedAt DateTime? @map("last_lead_assigned_at") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  leads        Lead[]
+  visits       Visit[]  @relation("VisitBroker")
+  visitsCreated Visit[] @relation("VisitCreatedBy")
+  stageChanges LeadStageHistory[]
+  messagesSent Message[]
+  dealsClosed  Deal[]   @relation("DealClosedBy")
+  dealsAsBroker Deal[]  @relation("DealBroker")
+  dealsVoided  Deal[]   @relation("DealVoidedBy")
+  scoreWeightsUpdated ScoreWeight[]
+  notifications       Notification[]
+  leadReads           LeadRead[]
+
+  @@map("users")
+}
+
+model Lead {
+  id           String           @id @default(uuid()) @db.Uuid
+  /// Formato internacional, só dígitos (ex.: 5561999998888)
+  phone        String           @unique
+  name         String?
+  originPost   String?          @map("origin_post")
+  originSource OriginSource     @default(UNKNOWN) @map("origin_source")
+  score        Int              @default(0)
+  /// Nula até o bot concluir a qualificação
+  temperature  LeadTemperature?
+  brokerId     String?          @map("broker_id") @db.Uuid
+  stage        LeadStage        @default(NEW)
+  /// Última mensagem em qualquer direção (ordena a lista)
+  lastMessageAt DateTime?       @map("last_message_at") @db.Timestamptz(3)
+  /// Última mensagem do cliente (janela de 24 horas do WhatsApp)
+  lastInboundAt DateTime?       @map("last_inbound_at") @db.Timestamptz(3)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  broker       User?                 @relation(fields: [brokerId], references: [id], onDelete: SetNull)
+  messages     Message[]
+  answers      QualificationAnswer[]
+  visits       Visit[]
+  deals        Deal[]
+  stageHistory LeadStageHistory[]
+  botSession   BotSession?
+  notifications Notification[]
+  reads         LeadRead[]
+
+  @@index([brokerId])
+  @@index([lastMessageAt(sort: Desc)])
+  @@index([stage])
+  @@index([temperature])
+  @@index([originSource, originPost])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+model LeadStageHistory {
+  id          String     @id @default(uuid()) @db.Uuid
+  leadId      String     @map("lead_id") @db.Uuid
+  fromStage   LeadStage? @map("from_stage")
+  toStage     LeadStage  @map("to_stage")
+  /// Nulo quando a mudança foi feita pelo sistema ou pelo bot
+  changedById String?    @map("changed_by_id") @db.Uuid
+  changedAt   DateTime   @default(now()) @map("changed_at") @db.Timestamptz(3)
+
+  lead      Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  changedBy User? @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([leadId, changedAt])
+  @@map("lead_stage_history")
+}
+
+model Message {
+  id          String           @id @default(uuid()) @db.Uuid
+  leadId      String           @map("lead_id") @db.Uuid
+  direction   MessageDirection
+  /// Tipo do WhatsApp: text, image, audio, button, interactive...
+  type        String
+  body        String?
+  /// Id da mídia na Meta; o download fica para a Etapa 5
+  mediaId     String?          @map("media_id")
+  mediaUrl    String?          @map("media_url")
+  /// Id da mensagem no WhatsApp; único para ignorar reenvios do webhook
+  waMessageId String?          @unique @map("wa_message_id")
+  /// Nulo quando enviada pelo bot ou recebida do cliente
+  sentById    String?          @map("sent_by_id") @db.Uuid
+  sentAt      DateTime         @map("sent_at") @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  lead   Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sentBy User? @relation(fields: [sentById], references: [id], onDelete: SetNull)
+
+  @@index([leadId, sentAt])
+  @@map("messages")
+}
+
+model QualificationAnswer {
+  id          String   @id @default(uuid()) @db.Uuid
+  leadId      String   @map("lead_id") @db.Uuid
+  questionKey String   @map("question_key")
+  answerKey   String   @map("answer_key")
+  answerLabel String   @map("answer_label")
+  points      Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, questionKey])
+  @@map("qualification_answers")
+}
+
+model Visit {
+  id                String      @id @default(uuid()) @db.Uuid
+  leadId            String      @map("lead_id") @db.Uuid
+  brokerId          String      @map("broker_id") @db.Uuid
+  scheduledAt       DateTime    @map("scheduled_at") @db.Timestamptz(3)
+  endsAt            DateTime    @map("ends_at") @db.Timestamptz(3)
+  propertyReference String?     @map("property_reference")
+  status            VisitStatus @default(SCHEDULED)
+  feedback          String?
+  source            VisitSource @default(PANEL)
+  /// Visita que esta substituiu (quando foi remarcada)
+  rescheduledFromId String?     @unique @map("rescheduled_from_id") @db.Uuid
+  createdById       String?     @map("created_by_id") @db.Uuid
+  outcomeAt         DateTime?   @map("outcome_at") @db.Timestamptz(3)
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  lead            Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  broker          User   @relation("VisitBroker", fields: [brokerId], references: [id], onDelete: Restrict)
+  createdBy       User?  @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  rescheduledFrom Visit? @relation("VisitReschedule", fields: [rescheduledFromId], references: [id], onDelete: SetNull)
+  rescheduledTo   Visit? @relation("VisitReschedule")
+
+  @@index([brokerId, scheduledAt])
+  @@index([leadId])
+  @@index([status, endsAt])
+  @@map("visits")
+}
+
+model Deal {
+  id                String      @id @default(uuid()) @db.Uuid
+  leadId            String      @map("lead_id") @db.Uuid
+  result            DealResult
+  /// Venda ou locação (na locação, value é o aluguel mensal)
+  kind              DealKind    @default(SALE)
+  value             Decimal?    @db.Decimal(14, 2)
+  lossReason        LossReason? @map("loss_reason")
+  notes             String?
+  propertyReference String?     @map("property_reference")
+  /// Corretor do lead no momento do fechamento
+  brokerId          String?     @map("broker_id") @db.Uuid
+  closedById        String?     @map("closed_by_id") @db.Uuid
+  closedAt          DateTime    @default(now()) @map("closed_at") @db.Timestamptz(3)
+  /// Anulado (venda desfeita ou lead reaberto): fica no histórico, fora dos indicadores
+  voidedAt          DateTime?   @map("voided_at") @db.Timestamptz(3)
+  voidedById        String?     @map("voided_by_id") @db.Uuid
+
+  lead     Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  closedBy User? @relation("DealClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  broker   User? @relation("DealBroker", fields: [brokerId], references: [id], onDelete: SetNull)
+  voidedBy User? @relation("DealVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([result, closedAt])
+  @@index([brokerId, closedAt])
+  @@map("deals")
+}
+
+/// Estado do chatbot de qualificação. Uma sessão por lead.
+model BotSession {
+  id          String           @id @default(uuid()) @db.Uuid
+  leadId      String           @unique @map("lead_id") @db.Uuid
+  currentStep String           @map("current_step")
+  /// Quantas vezes a pergunta atual já foi repetida por resposta inválida
+  retryCount  Int              @default(0) @map("retry_count")
+  status      BotSessionStatus @default(ACTIVE)
+  /// Respostas já dadas, usadas para ramificar o fluxo (ex.: compra ou aluguel)
+  context     Json             @default("{}")
+  startedAt   DateTime         @default(now()) @map("started_at") @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  finishedAt  DateTime?        @map("finished_at") @db.Timestamptz(3)
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("bot_sessions")
+}
+
+/// Pontos de cada resposta do bot. Editável pelo dono; os padrões são criados ao subir a API.
+model ScoreWeight {
+  id          String   @id @default(uuid()) @db.Uuid
+  questionKey String   @map("question_key")
+  answerKey   String   @map("answer_key")
+  points      Int
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([questionKey, answerKey])
+  @@map("score_weights")
+}
+
+/// Até quando cada usuário leu a conversa de cada lead (contador de não lidas).
+model LeadRead {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  leadId     String   @map("lead_id") @db.Uuid
+  lastReadAt DateTime @map("last_read_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, leadId])
+  @@map("lead_reads")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  leadId    String?          @map("lead_id") @db.Uuid
+  type      NotificationType
+  title     String
+  body      String?
+  readAt    DateTime?        @map("read_at") @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+/// Payload bruto recebido da Meta. Gravado antes de responder o webhook,
+/// processado depois de forma assíncrona.
+model WebhookEvent {
+  id          String             @id @default(uuid()) @db.Uuid
+  payload     Json
+  status      WebhookEventStatus @default(PENDING)
+  attempts    Int                @default(0)
+  lastError   String?            @map("last_error")
+  receivedAt  DateTime           @default(now()) @map("received_at") @db.Timestamptz(3)
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  processedAt DateTime?          @map("processed_at") @db.Timestamptz(3)
+
+  @@index([status, receivedAt])
+  @@map("webhook_events")
+}

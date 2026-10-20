@@ -1,0 +1,56 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Schibsted Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Base: papel de planta e tinta */
+  --color-paper: #f2f4f3;
+  --color-surface: #ffffff;
+  --color-ink: #1b2b2e;
+  --color-muted: #5b6b6d;
+  --color-line: #d9e0de;
+
+  /* Marca: verde-pinho */
+  --color-pine: #1f5a4f;
+  --color-pine-dark: #164239;
+  --color-pine-soft: #e3eeeb;
+
+  /* Temperatura do lead: a cor carrega significado, não é decoração */
+  --color-hot: #c23b2e;
+  --color-hot-soft: #f8e4e1;
+  --color-warm: #b97d0c;
+  --color-warm-soft: #f7ecd6;
+  --color-cold: #3a6ea5;
+  --color-cold-soft: #e1eaf4;
+
+  --color-danger: #b42318;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-pine);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.capitalize-first::first-letter {
+  text-transform: uppercase;
+}
