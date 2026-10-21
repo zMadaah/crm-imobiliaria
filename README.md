@@ -147,3 +147,11 @@ cd ../web && npm install
 2. Em **Anúncios**, dê nomes aos dois. A lista de leads e os Indicadores passam a mostrar os nomes.
 3. `npm run chat` começando com "Olá, vi o REF-101": origem "Post REF-101".
 4. `npm run check:indicators`: 7 linhas com ✔.
+
+## Publicação
+
+Roteiro completo, da Meta ao primeiro cliente: [`docs/publicacao.md`](docs/publicacao.md).
+
+- `render.yaml`: Blueprint do Render com a API (sempre ativa) e o banco.
+- `GET /health`: confirma o banco e se a configuração do WhatsApp está completa, sem mostrar segredos.
+- Seed de produção com usuários reais: `SEED_OWNER` e `SEED_BROKERS` (formato `Nome <email>`).

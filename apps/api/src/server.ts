@@ -2,6 +2,7 @@ import cors from 'cors';
 import express, { type ErrorRequestHandler } from 'express';
 import { env } from './config/env';
 import { prisma } from './lib/prisma';
+import { whatsappStatus } from './modules/health/health';
 import { adsRouter } from './modules/ads/ads.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { leadsRouter } from './modules/leads/leads.routes';
@@ -24,8 +25,16 @@ app.use('/webhooks/whatsapp', whatsappWebhookRouter);
 app.use(cors({ origin: env.WEB_ORIGIN.split(',').map((origin) => origin.trim()) }));
 app.use(express.json());
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+/** Usada pelo Render para saber se a API está de pé. Não expõe nenhum segredo. */
+app.get('/health', async (_req, res) => {
+  let database = 'ok';
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {
+    database = 'indisponível';
+  }
+  const whatsapp = whatsappStatus(env);
+  res.status(database === 'ok' ? 200 : 503).json({ status: database === 'ok' ? 'ok' : 'erro', database, whatsapp });
 });
 
 app.use('/auth', authRouter);

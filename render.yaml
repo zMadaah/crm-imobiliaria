@@ -1,0 +1,51 @@
+# Blueprint do Render: API + banco PostgreSQL.
+# No Render: New > Blueprint > escolha este repositório e o branch.
+# Os valores marcados com "sync: false" são pedidos na criação (segredos da Meta e do seed).
+services:
+  - type: web
+    name: crm-cb-engenharia-api
+    runtime: node
+    rootDir: apps/api
+    # Instância paga e sempre ativa: o plano gratuito dorme e a Meta perde mensagens do webhook.
+    plan: 0.5c-512mb
+    region: virginia
+    buildCommand: npm ci --include=dev && npm run build
+    preDeployCommand: npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crm-cb-engenharia-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: WHATSAPP_DRY_RUN
+        value: "false"
+      - key: WHATSAPP_API_VERSION
+        value: v23.0
+      # Endereço do painel na Vercel, ex.: https://crm-cb-engenharia.vercel.app
+      - key: WEB_ORIGIN
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+
+databases:
+  - name: crm-cb-engenharia-db
+    databaseName: crm
+    user: crm
+    region: virginia
+    postgresMajorVersion: "17"
+    plan: 0.1c-256mb
