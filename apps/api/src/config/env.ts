@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import { normalizeBusinessNumber } from '../modules/whatsapp/business-number';
 
 const envSchema = z
   .object({
@@ -15,6 +16,19 @@ const envSchema = z
       .transform((value) => value === 'true'),
     WHATSAPP_ACCESS_TOKEN: z.string().optional(),
     WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+    // Número da empresa, com 55 e DDD (ex.: 5561998665922). Aparece no painel e nos links wa.me.
+    WHATSAPP_BUSINESS_NUMBER: z
+      .string()
+      .optional()
+      .transform((value, ctx) => {
+        if (!value?.trim()) return undefined;
+        try {
+          return normalizeBusinessNumber(value);
+        } catch (error) {
+          ctx.addIssue({ code: 'custom', message: (error as Error).message });
+          return z.NEVER;
+        }
+      }),
     WHATSAPP_API_VERSION: z.string().default('v23.0'),
     // Painel (Etapa 4)
     JWT_SECRET: z.string().min(32, 'JWT_SECRET precisa ter pelo menos 32 caracteres'),

@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { formatDateTime } from '../components/formatDate';
+import { WhatsAppCard } from '../components/WhatsAppCard';
 import { ApiError, apiFetch } from '../lib/api';
 import type { AdItem } from '../lib/types';
 
@@ -27,6 +28,8 @@ export function Ads() {
         Cada anúncio de "Clique para o WhatsApp" aparece aqui quando traz o primeiro cliente. Dê um nome que você reconheça
         e o imóvel: eles passam a aparecer nos leads, nas visitas e nos indicadores no lugar do número do anúncio.
       </p>
+
+      <WhatsAppCard />
 
       {error && <p className="mt-6 text-danger">{error}</p>}
       {!items && !error && <p className="mt-10 text-muted">Carregando…</p>}

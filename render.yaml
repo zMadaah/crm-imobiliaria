@@ -30,6 +30,8 @@ services:
         value: "false"
       - key: WHATSAPP_API_VERSION
         value: v23.0
+      - key: WHATSAPP_BUSINESS_NUMBER
+        value: "5561998665922"
       # Endereço do painel na Vercel, ex.: https://crm-cb-engenharia.vercel.app
       - key: WEB_ORIGIN
         sync: false

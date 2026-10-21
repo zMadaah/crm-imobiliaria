@@ -55,7 +55,7 @@ async function postMessage(message: WaMessage) {
             field: 'messages',
             value: {
               messaging_product: 'whatsapp',
-              metadata: { display_phone_number: '15550000000', phone_number_id: phoneNumberId },
+              metadata: { display_phone_number: process.env.WHATSAPP_BUSINESS_NUMBER || '15550000000', phone_number_id: phoneNumberId },
               contacts: [{ wa_id: phone, profile: { name: 'Cliente Simulado' } }],
               messages: [message],
             },

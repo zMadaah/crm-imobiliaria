@@ -40,6 +40,8 @@ Siga na ordem. Cada parte termina com uma conferência; só avance quando ela pa
    | `WHATSAPP_APP_SECRET` | App Secret (Parte A, passo 7) |
    | `WHATSAPP_VERIFY_TOKEN` | senha que você inventou (Parte A, passo 8) |
    | `WEB_ORIGIN` | por enquanto `http://localhost:5173`; troca na Parte D |
+
+   O número da empresa (`WHATSAPP_BUSINESS_NUMBER=5561998665922`) já vem preenchido no `render.yaml`.
    `JWT_SECRET` é gerado sozinho. Os planos já vêm pagos (API sempre ativa); se o Render reclamar do nome de um plano,
    escolha na tela o menor plano pago da API e do banco.
 3. Clique em **Apply**. O deploy instala, compila, aplica as migrations e sobe a API.
@@ -80,6 +82,7 @@ O comando lista cada usuário criado. Todos entram com a senha provisória.
 Observação: o plano gratuito da Vercel é para uso não comercial. Para o painel de um cliente, confira se o plano pago se aplica.
 
 **Conferência:** abra o painel, entre com o e-mail do dono e a senha provisória. A lista de leads abre vazia, sem erro.
+Em **Anúncios**, o cartão do topo mostra "WhatsApp do bot: +55 61 99866-5922" e "Conectado à Meta".
 
 ---
 
