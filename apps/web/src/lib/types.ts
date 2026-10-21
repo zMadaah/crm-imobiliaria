@@ -34,10 +34,13 @@ export type LeadStage =
   | 'WON'
   | 'LOST';
 
+export type LeadChannel = 'WHATSAPP' | 'SITE';
+
 export type LeadListItem = {
   id: string;
   name: string | null;
   phone: string;
+  channel: LeadChannel;
   score: number;
   temperature: Temperature | null;
   stage: LeadStage;
@@ -65,6 +68,7 @@ export type LeadDetail = {
   id: string;
   name: string | null;
   phone: string;
+  channel: LeadChannel;
   score: number;
   temperature: Temperature | null;
   stage: LeadStage;

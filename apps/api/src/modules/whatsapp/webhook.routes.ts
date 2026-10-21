@@ -13,6 +13,10 @@ whatsappWebhookRouter.get('/', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
+  if (!env.WHATSAPP_VERIFY_TOKEN) {
+    res.status(503).send('WhatsApp não configurado neste servidor.');
+    return;
+  }
   if (mode === 'subscribe' && token === env.WHATSAPP_VERIFY_TOKEN && typeof challenge === 'string') {
     res.status(200).type('text/plain').send(challenge);
     return;
@@ -31,6 +35,10 @@ whatsappWebhookRouter.post('/', express.raw({ type: '*/*', limit: '2mb' }), asyn
     return;
   }
 
+  if (!env.WHATSAPP_APP_SECRET) {
+    res.sendStatus(503);
+    return;
+  }
   if (!isValidSignature(rawBody, req.get('x-hub-signature-256'), env.WHATSAPP_APP_SECRET)) {
     res.sendStatus(401);
     return;

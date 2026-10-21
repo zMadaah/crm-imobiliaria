@@ -31,6 +31,11 @@ enum LeadStage {
   LOST
 }
 
+enum LeadChannel {
+  WHATSAPP
+  SITE
+}
+
 enum OriginSource {
   REF_CODE
   CTWA_AD
@@ -83,6 +88,7 @@ enum BotSessionStatus {
 enum NotificationType {
   HOT_LEAD
   VISIT_BOOKED
+  LEAD_RETURNED
 }
 
 enum WebhookEventStatus {
@@ -126,6 +132,8 @@ model Lead {
   /// Formato internacional, só dígitos (ex.: 5561999998888)
   phone        String           @unique
   name         String?
+  /// Por onde o lead chegou: bot do WhatsApp ou página de atendimento
+  channel      LeadChannel      @default(WHATSAPP)
   originPost   String?          @map("origin_post")
   originSource OriginSource     @default(UNKNOWN) @map("origin_source")
   /// ID do anúncio Click-to-WhatsApp (quando veio de anúncio)
@@ -152,6 +160,7 @@ model Lead {
   deals        Deal[]
   stageHistory LeadStageHistory[]
   botSession   BotSession?
+  webChats     WebChat[]
   notifications Notification[]
   reads         LeadRead[]
 
@@ -360,6 +369,28 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@map("notifications")
+}
+
+/// Conversa da página de atendimento (sem WhatsApp). O lead só é criado quando o
+/// cliente informa o WhatsApp; até lá, mensagens e respostas ficam guardadas aqui.
+model WebChat {
+  id             String           @id @default(uuid()) @db.Uuid
+  /// SHA-256 do token que fica no navegador do cliente
+  tokenHash      String           @unique @map("token_hash")
+  /// Código do anúncio vindo do endereço da página (?anuncio=REF-101)
+  adCode         String?          @map("ad_code")
+  state          Json
+  transcript     Json             @default("[]")
+  pendingAnswers Json             @default("[]") @map("pending_answers")
+  status         BotSessionStatus @default(ACTIVE)
+  leadId         String?          @map("lead_id") @db.Uuid
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@map("web_chats")
 }
 
 /// Payload bruto recebido da Meta. Gravado antes de responder o webhook,

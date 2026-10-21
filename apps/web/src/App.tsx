@@ -3,6 +3,7 @@ import { homePathFor, useAuth } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
 import { Layout } from './components/Layout';
 import { Ads } from './pages/Ads';
+import { Attendance } from './pages/Attendance';
 import { Agenda } from './pages/Agenda';
 import { Indicators } from './pages/Indicators';
 import { LeadDetail } from './pages/LeadDetail';
@@ -21,6 +22,8 @@ export function App() {
   return (
     <Routes>
       <Route path="/entrar" element={<Login />} />
+      {/* Pública: página do anúncio, sem login */}
+      <Route path="/atendimento" element={<Attendance />} />
       <Route
         element={
           <RequireAuth>

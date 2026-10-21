@@ -42,3 +42,27 @@ export async function notifyHotLead(leadId: string): Promise<void> {
     realtimeBus.publish(userId, 'notification', toNotificationEvent(notification));
   }
 }
+
+/** Cliente que já era lead preencheu de novo a página de atendimento. */
+export async function notifyLeadReturned(leadId: string): Promise<void> {
+  const lead = await prisma.lead.findUniqueOrThrow({
+    where: { id: leadId },
+    select: { name: true, phone: true, broker: { select: { id: true, active: true } } },
+  });
+  const recipients = lead.broker?.active
+    ? [lead.broker.id]
+    : (await prisma.user.findMany({ where: { role: 'OWNER', active: true }, select: { id: true } })).map((u) => u.id);
+
+  for (const userId of recipients) {
+    const notification = await prisma.notification.create({
+      data: {
+        userId,
+        leadId,
+        type: 'LEAD_RETURNED',
+        title: `Cliente voltou pelo site: ${lead.name ?? lead.phone}`,
+        body: 'Respondeu de novo a página de atendimento. As respostas e o score foram atualizados.',
+      },
+    });
+    realtimeBus.publish(userId, 'notification', toNotificationEvent(notification));
+  }
+}

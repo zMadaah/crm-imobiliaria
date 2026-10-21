@@ -46,7 +46,7 @@ export function WhatsAppCard() {
           </span>
         ) : (
           <span className="flex items-center gap-1 rounded-full bg-warm-soft px-2 py-0.5 text-xs font-semibold text-warm">
-            <TriangleAlert size={13} aria-hidden /> {testing ? 'Modo de teste' : 'Configuração incompleta'}
+            <TriangleAlert size={13} aria-hidden /> {testing ? 'Atendimento pelo site' : 'Configuração incompleta'}
           </span>
         )}
       </div>
@@ -64,7 +64,7 @@ export function WhatsAppCard() {
         {!settings.number
           ? 'Peça para configurarem WHATSAPP_BUSINESS_NUMBER no servidor.'
           : testing
-            ? 'O bot está no modo de teste: as mensagens não são enviadas pela Meta. Para atender clientes de verdade, o número precisa ser cadastrado na Meta e o modo de teste desligado no servidor.'
+            ? `O bot ainda não responde por este WhatsApp (próxima etapa). Hoje os clientes são atendidos pela página ${window.location.origin}/atendimento?anuncio=CÓDIGO, e o corretor chama pelo botão do lead.`
             : status.ready
               ? 'Clientes que escreverem para este número são atendidos pelo bot.'
               : `Falta no servidor: ${status.problems.join('; ')}.`}

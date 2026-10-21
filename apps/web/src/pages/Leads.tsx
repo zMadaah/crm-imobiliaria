@@ -201,7 +201,10 @@ export function Leads() {
                   <p className={`truncate text-sm ${lead.unreadCount > 0 ? 'text-ink' : 'text-muted'}`}>
                     {lead.lastMessage ? previewOf(lead.lastMessage) : 'Sem mensagens'}
                   </p>
-                  <p className="truncate text-xs text-muted">{originLabel(lead)}</p>
+                  <p className="truncate text-xs text-muted">
+                    {lead.channel === 'SITE' && <span className="mr-1.5 rounded bg-pine-soft px-1.5 py-px font-semibold text-pine-dark">Site</span>}
+                    {originLabel(lead)}
+                  </p>
                 </div>
 
                 <div className="flex flex-col items-end gap-1 md:self-center">

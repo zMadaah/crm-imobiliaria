@@ -20,6 +20,11 @@ describe('whatsappStatus', () => {
     expect(status.problems).toEqual(['WHATSAPP_ACCESS_TOKEN não preenchido', 'WHATSAPP_PHONE_NUMBER_ID não preenchido']);
   });
 
+  it('modo de teste não exige nada da Meta', () => {
+    const status = whatsappStatus({ WHATSAPP_DRY_RUN: true, WHATSAPP_APP_SECRET: undefined, WHATSAPP_VERIFY_TOKEN: undefined });
+    expect(status).toMatchObject({ ready: true, problems: [] });
+  });
+
   it('valores de exemplo do .env.example contam como não preenchidos', () => {
     const status = whatsappStatus({ ...ready, WHATSAPP_APP_SECRET: 'cole-o-app-secret-aqui', WHATSAPP_VERIFY_TOKEN: 'troque-este-token' });
     expect(status.problems).toHaveLength(2);

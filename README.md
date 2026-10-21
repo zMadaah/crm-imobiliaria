@@ -148,10 +148,50 @@ cd ../web && npm install
 3. `npm run chat` começando com "Olá, vi o REF-101": origem "Post REF-101".
 4. `npm run check:indicators`: 7 linhas com ✔.
 
+## Atendimento pelo site (sem WhatsApp)
+
+O anúncio aponta para `/atendimento?anuncio=REF-101`, uma página pública com o mesmo bot:
+saudação, nome e WhatsApp do cliente, as 6 perguntas e, se ele quiser, a visita.
+
+- O lead só é criado quando o cliente informa o WhatsApp (celular com DDD, conferido).
+  Cliente que volta com o mesmo número não duplica: respostas e score são atualizados e o corretor é avisado.
+- No painel, leads do site têm o selo **Site** e, no lugar do campo de resposta, o botão
+  **Chamar no WhatsApp**, que abre o WhatsApp de quem está no painel com uma mensagem pronta.
+- Proteção: campo escondido contra robôs e limite por aparelho (em produção, 10 atendimentos novos por hora).
+
+## Rodar localmente
+
+Três terminais, a partir da pasta do projeto.
+
+**Primeira vez (ou depois de atualizar):**
+
+```bash
+cd apps/api
+npm install
+npx prisma generate
+npm run db:deploy
+npm run db:seed          # se ainda não tiver os usuários
+cd ../web
+npm install
+```
+
+**Terminal 1, API:** `cd apps/api && npm run dev` (porta 3333)
+
+**Terminal 2, painel e página:** `cd apps/web && npm run dev` (porta 5173)
+
+**No navegador:**
+
+- Painel: `http://localhost:5173`, com `dono@imobiliaria.local` e a senha do `SEED_PASSWORD`.
+- Página do cliente: `http://localhost:5173/atendimento?anuncio=REF-101`.
+  Abra numa janela anônima (ou no celular, se estiver na mesma rede) e responda como cliente.
+  O lead aparece no painel na hora. Para começar outro atendimento, use "Começar de novo" no fim.
+
+No `apps/api/.env`, para o site basta `WHATSAPP_DRY_RUN="true"`; as variáveis da Meta podem ficar vazias.
+
 ## Publicação
 
-Roteiro completo, da Meta ao primeiro cliente: [`docs/publicacao.md`](docs/publicacao.md).
+Roteiro completo: [`docs/publicacao.md`](docs/publicacao.md). Para ligar o bot no WhatsApp depois: [`docs/whatsapp-api.md`](docs/whatsapp-api.md).
 
 - `render.yaml`: Blueprint do Render com a API (sempre ativa) e o banco.
-- `GET /health`: confirma o banco e se a configuração do WhatsApp está completa, sem mostrar segredos.
+- `GET /health`: confirma o banco e a configuração do WhatsApp, sem mostrar segredos.
 - Seed de produção com usuários reais: `SEED_OWNER` e `SEED_BROKERS` (formato `Nome <email>`).

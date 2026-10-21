@@ -5,6 +5,7 @@ import { prisma } from './lib/prisma';
 import { whatsappStatus } from './modules/health/health';
 import { adsRouter } from './modules/ads/ads.routes';
 import { settingsRouter } from './modules/settings/settings.routes';
+import { webChatRouter } from './modules/webchat/web-chat.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { leadsRouter } from './modules/leads/leads.routes';
 import { visitsRouter } from './modules/visits/visits.routes';
@@ -46,6 +47,7 @@ app.use('/visits', visitsRouter);
 app.use('/reports', reportsRouter);
 app.use('/ads', adsRouter);
 app.use('/settings', settingsRouter);
+app.use('/public/chat', webChatRouter);
 
 const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   console.error('[api] erro não tratado', error);

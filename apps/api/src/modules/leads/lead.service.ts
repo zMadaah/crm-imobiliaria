@@ -1,4 +1,4 @@
-import { Prisma, type Lead } from '@prisma/client';
+import { Prisma, type Lead, type LeadChannel } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import type { ExtractedOrigin } from '../whatsapp/origin';
 
@@ -6,6 +6,8 @@ type FindOrCreateInput = {
   phone: string;
   name?: string | null;
   origin: ExtractedOrigin | null;
+  /** Canal gravado só na criação do lead */
+  channel?: LeadChannel;
 };
 
 type FindOrCreateResult = {
@@ -33,6 +35,7 @@ export async function findOrCreateLeadByPhone(input: FindOrCreateInput): Promise
       data: {
         phone: input.phone,
         name: input.name ?? null,
+        channel: input.channel ?? 'WHATSAPP',
         originPost: input.origin?.post ?? null,
         originSource: input.origin?.source ?? 'UNKNOWN',
         originAdId: input.origin?.adId ?? null,
