@@ -32,7 +32,7 @@ export type BotInput =
   | { kind: 'text'; text: string }
   | { kind: 'other' };
 
-export type InteractiveChoice = { id: string; title: string };
+export type InteractiveChoice = { id: string; title: string; description?: string };
 
 export type OutgoingMessage =
   | { type: 'text'; body: string }
@@ -65,7 +65,11 @@ export function renderStep(step: StepKey, context: BotContext, prefix?: string):
   const body = prefix ? `${prefix}\n\n${question}` : question;
 
   const choices: InteractiveChoice[] = [
-    ...definition.options(context).map((option) => ({ id: replyId(step, option.id), title: option.label })),
+    ...definition.options(context).map((option) => ({
+      id: replyId(step, option.id),
+      title: option.label,
+      ...(option.description ? { description: option.description } : {}),
+    })),
     { id: replyId(step, HANDOFF_OPTION_ID), title: HANDOFF_LABEL },
   ];
 

@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { CallOnWhatsApp } from '../components/CallOnWhatsApp';
 import { Composer } from '../components/Composer';
 import { DealActions } from '../components/DealActions';
 import { Conversation } from '../components/Conversation';
@@ -131,7 +132,7 @@ export function LeadDetail() {
               {lead.name && <>{formatPhone(lead.phone)}. </>}
               {STAGE_LABEL[lead.stage]}
               {lead.broker ? `, com ${lead.broker.name}` : ', sem corretor'}. {originLabel(lead)}.
-              {lead.botStatus && <> {BOT_STATUS_LABEL[lead.botStatus]}.</>}
+              {lead.channel === 'SITE' ? <> Veio pela página de atendimento.</> : lead.botStatus && <> {BOT_STATUS_LABEL[lead.botStatus]}.</>}
             </p>
           </div>
           <div className="hidden md:block">
@@ -161,7 +162,11 @@ export function LeadDetail() {
             onLoadOlder={() => void loadOlder()}
             currentUserId={user.id}
           />
-          <Composer window={lead.serviceWindow} botActive={lead.botStatus === 'ACTIVE'} onSend={send} />
+          {lead.channel === 'SITE' ? (
+            <CallOnWhatsApp lead={lead} />
+          ) : (
+            <Composer window={lead.serviceWindow} botActive={lead.botStatus === 'ACTIVE'} onSend={send} />
+          )}
         </div>
         <aside
           aria-label="Visitas, respostas do bot e histórico"

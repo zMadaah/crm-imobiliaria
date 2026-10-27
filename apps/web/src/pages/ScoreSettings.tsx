@@ -223,19 +223,12 @@ function WeightGroupFields({
  * antes de salvar. O cálculo oficial é sempre o do servidor.
  */
 function ProfileTester({ settings, draft }: { settings: WeightSettings; draft: Draft }) {
-  const [intent, setIntent] = useState<'buy' | 'rent'>('buy');
   const [choices, setChoices] = useState<Record<string, string>>({});
-
-  const groups = settings.groups.filter((group) => {
-    if (group.questionKey === 'intent') return false;
-    if (group.id.endsWith('_buy')) return intent === 'buy';
-    if (group.id.endsWith('_rent')) return intent === 'rent';
-    return true;
-  });
+  const groups = settings.groups;
 
   const pointsOf = (questionKey: string, answerKey: string) => parsePoints(draft[keyOf(questionKey, answerKey)]) ?? 0;
 
-  let total = pointsOf('intent', intent);
+  let total = 0;
   for (const group of groups) {
     const answerKey = choices[group.id] ?? group.answers[0]?.answerKey;
     if (answerKey) total += pointsOf(group.questionKey, answerKey);
@@ -245,17 +238,7 @@ function ProfileTester({ settings, draft }: { settings: WeightSettings; draft: D
 
   const maxPossible = Math.min(
     settings.maxScore,
-    ['buy', 'rent']
-      .map((option) => {
-        let sum = pointsOf('intent', option);
-        for (const group of settings.groups) {
-          if (group.questionKey === 'intent') continue;
-          if (group.id.endsWith(option === 'buy' ? '_rent' : '_buy')) continue;
-          sum += Math.max(0, ...group.answers.map((a) => pointsOf(group.questionKey, a.answerKey)));
-        }
-        return sum;
-      })
-      .reduce((a, b) => Math.max(a, b), 0),
+    groups.reduce((sum, group) => sum + Math.max(0, ...group.answers.map((a) => pointsOf(group.questionKey, a.answerKey))), 0),
   );
 
   return (
@@ -271,17 +254,6 @@ function ProfileTester({ settings, draft }: { settings: WeightSettings; draft: D
       <p className="text-sm text-muted">Perfil mais forte possível: {maxPossible} pontos</p>
 
       <div className="mt-5 space-y-3">
-        <label className="block text-sm">
-          <span className="text-muted">Comprar ou alugar</span>
-          <select
-            value={intent}
-            onChange={(e) => setIntent(e.target.value as 'buy' | 'rent')}
-            className="mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-2"
-          >
-            <option value="buy">Comprar</option>
-            <option value="rent">Alugar</option>
-          </select>
-        </label>
         {groups.map((group) => (
           <label key={group.id} className="block text-sm">
             <span className="text-muted">{group.title}</span>

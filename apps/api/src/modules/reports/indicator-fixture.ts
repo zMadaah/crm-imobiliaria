@@ -24,7 +24,11 @@ const leads: [number, string, string | null, string | null, string, string | nul
   [6, '2001-03-31 23:30', 'WARM', 'AD-777', 'CTWA_AD', B2], // último minuto do período: entra
   [7, '2001-04-01 00:00', 'HOT', 'REF-900', 'REF_CODE', B1], // fim é exclusivo: fica fora
   [8, '2001-02-28 23:59', 'WARM', 'REF-900', 'REF_CODE', B2], // antes do período: fica fora
+  [9, '2001-03-10 10:00', 'COLD', 'AD-555 (Torre B)', 'CTWA_AD', B2], // anúncio cadastrado com nome
 ];
+
+/** Lead 9 veio do anúncio 555, que o dono nomeou no painel. */
+const AD_OF_LEAD: Record<number, string> = { 9: '555' };
 
 const visits: [number, string, string, string][] = [
   // lead, corretor, início (Brasília), status
@@ -56,8 +60,10 @@ export const FIXTURE_STATEMENTS: string[] = [
   `INSERT INTO users (id, name, email, password_hash, role, updated_at) VALUES
     ('${B1}', 'Conferência Corretor A', 'conferencia-a@teste.local', 'x', 'BROKER', now()),
     ('${B2}', 'Conferência Corretor B', 'conferencia-b@teste.local', 'x', 'BROKER', now())`,
-  `INSERT INTO leads (id, phone, temperature, origin_post, origin_source, broker_id, created_at, updated_at) VALUES ${leads
-    .map(([n, at, temp, origin, source, broker]) => `('${lead(n)}', '550000000000${n}', ${temp ? `'${temp}'` : 'NULL'}, ${q(origin)}, '${source}', ${q(broker)}, ${brt(at)}, now())`)
+  `INSERT INTO ads (id, ad_id, headline, name, updated_at) VALUES
+    (gen_random_uuid(), '555', 'Torre B', 'Apto 2 quartos Torre B', now())`,
+  `INSERT INTO leads (id, phone, temperature, origin_post, origin_source, origin_ad_id, broker_id, created_at, updated_at) VALUES ${leads
+    .map(([n, at, temp, origin, source, broker]) => `('${lead(n)}', '550000000000${n}', ${temp ? `'${temp}'` : 'NULL'}, ${q(origin)}, '${source}', ${q(AD_OF_LEAD[n] ?? null)}, ${q(broker)}, ${brt(at)}, now())`)
     .join(', ')}`,
   `INSERT INTO visits (id, lead_id, broker_id, scheduled_at, ends_at, status, updated_at) VALUES ${visits
     .map(([n, broker, at, status]) => `(gen_random_uuid(), '${lead(n)}', '${broker}', ${brt(at)}, ${brt(at)}::timestamptz + interval '1 hour', '${status}', now())`)
@@ -69,13 +75,14 @@ export const FIXTURE_STATEMENTS: string[] = [
 
 /** Resultado esperado, calculado à mão a partir das tabelas acima. */
 export const EXPECTED: Indicators = {
-  temperature: { HOT: 2, WARM: 2, COLD: 1, NONE: 1 }, // leads 1 a 6
-  funnel: { leads: 6, withVisit: 4, visited: 2, won: 2 }, // visita: 1,2,3,6; realizada: 1,2; fechou: 1,2
+  temperature: { HOT: 2, WARM: 2, COLD: 2, NONE: 1 }, // leads 1 a 6 e 9
+  funnel: { leads: 7, withVisit: 4, visited: 2, won: 2 }, // visita: 1,2,3,6; realizada: 1,2; fechou: 1,2
   noShow: { done: 3, noShow: 1, rate: 0.25 }, // visitas de março: 3 realizadas, 1 falta (remarcada fora)
   byBroker: [{ brokerId: B1, brokerName: 'Conferência Corretor A', sales: 2, salesValue: '500999.00', rentals: 1, rentalsValue: '3500.00' }],
   totals: { sales: 2, salesValue: '500999.00', rentals: 1, rentalsValue: '3500.00' },
   byOrigin: [
     { origin: 'AD-777', originSource: 'CTWA_AD', leads: 2, won: 0, salesValue: '0.00', rentalsValue: '0.00' },
+    { origin: 'Anúncio: Apto 2 quartos Torre B', originSource: 'CTWA_AD', leads: 1, won: 0, salesValue: '0.00', rentalsValue: '0.00' },
     { origin: 'Não identificada', originSource: 'UNKNOWN', leads: 2, won: 0, salesValue: '0.00', rentalsValue: '0.00' },
     { origin: 'REF-900', originSource: 'REF_CODE', leads: 2, won: 2, salesValue: '500000.00', rentalsValue: '3500.00' },
   ],

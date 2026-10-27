@@ -5,6 +5,8 @@ import { findOrCreateLeadByPhone } from '../leads/lead.service';
 import { publishLeadMessage, toMessageDto } from '../realtime/lead-events';
 import { extractMessageContent, normalizePhone } from './message-content';
 import { extractOrigin } from './origin';
+import { isConfiguredNumber } from './phone-number';
+import { env } from '../../config/env';
 import type { WaContact, WaMessage, WhatsAppWebhookPayload } from './webhook.types';
 
 const MAX_ATTEMPTS = 5;
@@ -97,6 +99,12 @@ async function handlePayload(payload: WhatsAppWebhookPayload): Promise<void> {
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
       if (change.field !== 'messages') continue;
+
+      const incomingNumberId = change.value.metadata?.phone_number_id;
+      if (!isConfiguredNumber(incomingNumberId, env.WHATSAPP_PHONE_NUMBER_ID)) {
+        console.warn(`[webhook] mensagem para outro número (${incomingNumberId}) ignorada`);
+        continue;
+      }
 
       const contacts = change.value.contacts ?? [];
       // Atualizações de status (entregue, lida) ficam fora desta etapa.

@@ -6,31 +6,17 @@ import { FLOW, type BotContext, type StepKey } from '../bot/qualification-flow';
 
 /** Pontos iniciais. Toda opção do fluxo pontuável precisa estar aqui (validado em teste). */
 export const DEFAULT_POINTS: Partial<Record<StepKey, Record<string, number>>> = {
-  intent: { buy: 0, rent: 0 },
-  region: { centro: 10, zona_norte: 10, zona_sul: 10, zona_leste: 10, zona_oeste: 10, outra: 0 },
-  price: {
-    up_to_300k: 10,
-    '300k_500k': 10,
-    '500k_1m': 10,
-    '1m_2m': 10,
-    over_2m: 10,
-    up_to_1500: 10,
-    '1500_3000': 10,
-    '3000_5000': 10,
-    over_5000: 10,
-  },
+  goal: { live_first: 10, live_move: 10, invest: 10, evaluating: 0 },
+  search_stage: { starting: 0, comparing: 8, want_visit: 15 },
+  interest: { floor_plans: 5, location: 5, payment_terms: 5 },
   payment: {
-    cash: 25,
-    financing_approved: 25,
-    will_finance: 10,
-    unknown: 0,
-    guarantor: 20,
-    deposit: 20,
-    insurance: 20,
-    guarantee_unknown: 0,
+    own_funds: 25,
+    financing_simulated: 20,
+    sell_property: 15,
+    financing_not_simulated: 10,
+    understand_options: 5,
   },
-  timeline: { up_to_3m: 25, '3m_6m': 15, over_6m: 5, researching: 0 },
-  decision_maker: { alone: 5, shared: 3 },
+  timeline: { up_to_30d: 25, up_to_3m: 15, up_to_6m: 5, unknown: 0 },
   visit: { yes: 20, no: 0 },
 };
 
@@ -44,14 +30,11 @@ export type WeightGroup = {
 type GroupDefinition = { id: string; title: string; questionKey: StepKey; context?: BotContext['answers'] };
 
 const GROUPS: GroupDefinition[] = [
-  { id: 'intent', title: 'Comprar ou alugar', questionKey: 'intent' },
-  { id: 'region', title: 'Região', questionKey: 'region' },
-  { id: 'price_buy', title: 'Faixa de preço na compra', questionKey: 'price', context: { intent: 'buy' } },
-  { id: 'price_rent', title: 'Faixa de aluguel', questionKey: 'price', context: { intent: 'rent' } },
-  { id: 'payment_buy', title: 'Forma de pagamento', questionKey: 'payment', context: { intent: 'buy' } },
-  { id: 'payment_rent', title: 'Garantia do aluguel', questionKey: 'payment', context: { intent: 'rent' } },
-  { id: 'timeline', title: 'Prazo', questionKey: 'timeline' },
-  { id: 'decision_maker', title: 'Quem decide', questionKey: 'decision_maker' },
+  { id: 'goal', title: 'Morar ou investir', questionKey: 'goal' },
+  { id: 'search_stage', title: 'Etapa da busca', questionKey: 'search_stage' },
+  { id: 'interest', title: 'O que quer conhecer primeiro', questionKey: 'interest' },
+  { id: 'payment', title: 'Forma de pagamento', questionKey: 'payment' },
+  { id: 'timeline', title: 'Prazo para o próximo passo', questionKey: 'timeline' },
   { id: 'visit', title: 'Pedido de visita', questionKey: 'visit' },
 ];
 

@@ -30,9 +30,9 @@ export function formatPhone(phone: string): string {
   return match ? `+55 ${match[1]} ${match[2]}-${match[3]}` : `+${phone}`;
 }
 
-export function originLabel(lead: { originPost: string | null; originSource: string }): string {
-  if (!lead.originPost) return 'Origem não identificada';
-  return lead.originSource === 'CTWA_AD' ? `Anúncio ${lead.originPost.replace(/^AD-/, '')}` : `Post ${lead.originPost}`;
+/** O rótulo da origem vem pronto da API (nome do anúncio, código do post ou "não identificada"). */
+export function originLabel(lead: { originLabel?: string }): string {
+  return lead.originLabel ?? 'Origem não identificada';
 }
 
 export const VISIT_STATUS_LABEL: Record<VisitStatus, string> = {

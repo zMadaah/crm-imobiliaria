@@ -36,7 +36,7 @@ describe('extractRefCode', () => {
 describe('extractOrigin', () => {
   it('usa o código REF do texto do post', () => {
     const message = textRef.entry[0].changes[0].value.messages[0] as WaMessage;
-    expect(extractOrigin(message)).toEqual({ source: 'REF_CODE', post: 'REF-042' });
+    expect(extractOrigin(message)).toEqual({ source: 'REF_CODE', post: 'REF-042', adId: null, adHeadline: null, refCode: 'REF-042' });
   });
 
   it('usa o referral quando vem de anúncio', () => {
@@ -44,12 +44,22 @@ describe('extractOrigin', () => {
     expect(extractOrigin(message)).toEqual({
       source: 'CTWA_AD',
       post: 'AD-120211111111111111 (Casa 3 quartos no Lago Norte)',
+      adId: '120211111111111111',
+      adHeadline: 'Casa 3 quartos no Lago Norte',
+      refCode: null,
     });
   });
 
-  it('anúncio tem prioridade sobre REF no texto', () => {
+  it('anúncio define a origem e o REF digitado é guardado junto', () => {
     const message = textMessage('Vi o REF-042', { referral: { source_id: '999' } });
-    expect(extractOrigin(message)).toEqual({ source: 'CTWA_AD', post: 'AD-999' });
+    expect(extractOrigin(message)).toEqual({ source: 'CTWA_AD', post: 'AD-999', adId: '999', adHeadline: null, refCode: 'REF-042' });
+  });
+
+  it('dois anúncios diferentes geram origens diferentes', () => {
+    const a = extractOrigin(textMessage('Olá', { referral: { source_id: '111', headline: 'Torre A' } }));
+    const b = extractOrigin(textMessage('Olá', { referral: { source_id: '222', headline: 'Torre B' } }));
+    expect(a?.adId).toBe('111');
+    expect(b?.adId).toBe('222');
   });
 
   it('retorna null sem origem identificável', () => {
